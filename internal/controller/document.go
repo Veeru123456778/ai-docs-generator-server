@@ -7,6 +7,7 @@ import (
 	"ai-docs-generator/internal/dtos"
 	"ai-docs-generator/internal/repository"
 	"ai-docs-generator/internal/service"
+	"ai-docs-generator/internal/models" 
 
 	"github.com/gin-gonic/gin"
 )
@@ -34,6 +35,24 @@ func (ctrl *DocumentController) Create(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, res)
 }
+
+
+func (ctrl *DocumentController) List(c *gin.Context) {
+	userID := c.Query("user_id")
+
+	docs, err := ctrl.docService.GetDocumentsByUserID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch documents"})
+		return
+	}
+
+	if docs == nil {
+		docs = []*models.Document{}
+	}
+
+	c.JSON(http.StatusOK, docs)
+}
+
 
 func (ctrl *DocumentController) GetByID(c *gin.Context) {
 	id := c.Param("id")

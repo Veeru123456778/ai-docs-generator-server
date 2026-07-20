@@ -47,6 +47,7 @@ func RegisterRoutes(
 		docs := v1.Group("/documents")
 		
 		{
+			docs.GET("", docCtrl.List)
 			docs.POST("", docCtrl.Create)
 			docs.GET("/:id", docCtrl.GetByID)
 			docs.PUT("/:id", docCtrl.Update)

@@ -17,6 +17,7 @@ import (
 type DocumentService interface {
 	CreateDocument(ctx context.Context, req *dtos.CreateDocumentRequest) (*dtos.DocumentResponse, error)
 	GetDocumentByID(ctx context.Context, id string) (*dtos.DocumentResponse, error)
+	GetDocumentsByUserID(ctx context.Context, userID string) ([]*models.Document, error) 
 	GetDocumentWithBlocks(ctx context.Context, id string) (*dtos.DocumentWithBlocksResponse, error)
 	UpdateDocument(ctx context.Context, id string, req *dtos.UpdateDocumentRequest) (*dtos.DocumentResponse, error)
 	DeleteDocument(ctx context.Context, id string) error
@@ -78,6 +79,13 @@ func (s *documentService) CreateDocument(ctx context.Context, req *dtos.CreateDo
 	}, nil
 }
 
+func (s *documentService) GetDocumentsByUserID(ctx context.Context, userID string) ([]*models.Document, error) {
+	if userID == "" {
+		// Fallback to default user if none provided in query param
+		userID = "usr_123"
+	}
+	return s.docRepo.GetByUserID(ctx, userID)
+}
 
 func (s *documentService) GetDocumentByID(ctx context.Context, id string) (*dtos.DocumentResponse, error) {
 	doc, err := s.docRepo.GetByID(ctx, id)

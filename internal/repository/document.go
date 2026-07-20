@@ -27,6 +27,7 @@ type DocumentRepository interface {
 	Create(ctx context.Context, doc *models.Document) error
 	// Retrieves a single document by its unique ID
 	GetByID(ctx context.Context, id string) (*models.Document, error)
+	GetByUserID(ctx context.Context, userID string) ([]*models.Document, error) 
 	// Updates title and block order for an existing document
 	Update(ctx context.Context, doc *models.Document) error
 	// Deletes a document and its associated blocks
@@ -71,6 +72,48 @@ func (r *PostgresDocumentRepository) Create(ctx context.Context, doc *models.Doc
 	// Return nil indicating successful insertion
 	return nil
 }
+
+
+
+func (r *PostgresDocumentRepository) GetByUserID(ctx context.Context, userID string) ([]*models.Document, error) {
+	query := `
+		SELECT id, user_id, title, block_order, created_at, updated_at
+		FROM documents
+		WHERE user_id = $1
+		ORDER BY updated_at DESC
+	`
+
+	// Use r.pool.Query instead of r.db.QueryContext
+	rows, err := r.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query documents by user_id: %w", err)
+	}
+	defer rows.Close()
+
+	var docs []*models.Document
+	for rows.Next() {
+		var doc models.Document
+		err := rows.Scan(
+			&doc.ID,
+			&doc.UserID,
+			&doc.Title,
+			&doc.BlockOrder,
+			&doc.CreatedAt,
+			&doc.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan document row: %w", err)
+		}
+		docs = append(docs, &doc)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error during row iteration: %w", err)
+	}
+
+	return docs, nil
+}
+
 
 // GetByID retrieves a document by ID from the database
 func (r *PostgresDocumentRepository) GetByID(ctx context.Context, id string) (*models.Document, error) {
