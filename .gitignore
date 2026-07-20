@@ -1,0 +1,17 @@
+# Environment secrets
+.env
+
+# Go binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/bin/
+/cmd/api/api
+
+# IDE settings
+.vscode/
+.idea/
