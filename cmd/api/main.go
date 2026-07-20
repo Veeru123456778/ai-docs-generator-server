@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"ai-docs-generator/internal/config"
+	"ai-docs-generator/internal/database"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -13,7 +14,7 @@ import (
 func main() {
 	// Initialize structured logger
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
+	slog.SetDefault(logger)    
 
 	// Load .env file if present
 	if err := godotenv.Load(); err != nil {
@@ -21,6 +22,15 @@ func main() {
 	}
 
 	cfg := config.LoadConfig()
+
+	db,err := database.NewPostgres(cfg)
+
+	if err!=nil{
+		slog.Error("Failed to initialize database connection", "error", err)
+		os.Exit(1)
+	}
+    
+	defer db.Close()
 
 	// Initialize Gin router
 	r := gin.New()

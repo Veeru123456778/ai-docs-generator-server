@@ -3,30 +3,37 @@ package config
 import "os"
 
 type Config struct {
-	Port        string
-	Env         string
+	// Holds the server port number (e.g., "8080")
+	Port string
+	Env string
 	DatabaseURL string
 }
 
+// LoadConfig reads environment variables and falls back to constants if missing
 func LoadConfig() *Config {
+	// Try to get the PORT environment variable from the operating system
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = DEFAULT_PORT
+		port = DefaultPort
 	}
 
 	env := os.Getenv("ENV")
 	if env == "" {
-		env = DEFAULT_ENVIRONMENT
+		env = DefaultEnv
 	}
 
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = DEFAULT_DATABASE_URL
+		// Assign the default database URL constant if missing
+		dbURL = DefaultDatabaseURL
 	}
 
 	return &Config{
-		Port:        port,
-		Env:         env,
+		// Set the Port field in the Config struct
+		Port: port,
+		// Set the Env field in the Config struct
+		Env: env,
+		// Set the DatabaseURL field in the Config struct
 		DatabaseURL: dbURL,
 	}
-};
+}
