@@ -5,50 +5,56 @@ import (
 	"os"
 
 	"ai-docs-generator/internal/config"
+	"ai-docs-generator/internal/controller"
 	"ai-docs-generator/internal/database"
+	"ai-docs-generator/internal/repository"
+	"ai-docs-generator/internal/routes"
+	"ai-docs-generator/internal/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
 
 func main() {
-	// Initialize structured logger
+	// 1. Structured Logging Setup
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(logger)    
+	slog.SetDefault(logger)
 
-	// Load .env file if present
+	// 2. Load Environment Variables
 	if err := godotenv.Load(); err != nil {
-		slog.Info("No .env file found, reading from environment variables")
+		slog.Info("No .env file found, relying on system environment variables")
 	}
 
 	cfg := config.LoadConfig()
 
-	db,err := database.NewPostgres(cfg)
-
-	if err!=nil{
+	// 3. Database Pool Connection
+	db, err := database.NewPostgres(cfg)
+	if err != nil {
 		slog.Error("Failed to initialize database connection", "error", err)
 		os.Exit(1)
 	}
-    
 	defer db.Close()
 
-	// Initialize Gin router
+	// 4. Repositories
+	docRepo := repository.NewPostgresDocumentRepository(db.Pool)
+	blockRepo := repository.NewPostgresBlockRepository(db.Pool)
+
+	// 5. Services
+	docService := service.NewDocumentService(docRepo, blockRepo)
+	blockService := service.NewBlockService(blockRepo, docRepo)
+
+	// 6. Controllers
+	docController := controller.NewDocumentController(docService)
+	blockController := controller.NewBlockController(blockService)
+
+	// 7. Router Setup & Route Registration
 	r := gin.New()
-	r.Use(gin.Recovery())
+	routes.RegisterRoutes(r, cfg, db, docController, blockController)
 
-	// Health check endpoint
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status":  "ok",
-			"env":     cfg.Env,
-			"message": "Generative Document Engine API is live",
-		})
-	})
-
-	slog.Info("Starting server", "port", cfg.Port)
+	// 8. Start HTTP Server
+	slog.Info("Starting HTTP server", "port", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
-		slog.Error("Server failed to start", "error", err)
+		slog.Error("Server execution failed", "error", err)
 		os.Exit(1)
 	}
 }
-
