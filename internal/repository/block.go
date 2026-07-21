@@ -23,9 +23,7 @@ type BlockRepository interface {
 	// Inserts a new block record into database
 	Create(ctx context.Context, block *models.Block) error
 
-	BatchCreate(ctx context.Context,blocks []*models.Block) error
-
-	// BatchCreate(ctx context.Context, docID string, blocks []*models.Block) ([]*models.Block, error)
+	BatchCreate(ctx context.Context, blocks []*models.Block) error
 
 	// Retrieves a single block by block ID
 	GetByID(ctx context.Context, id string) (*models.Block, error)
@@ -53,13 +51,14 @@ func NewPostgresBlockRepository(pool *pgxpool.Pool) *PostgresBlockRepository {
 func (r *PostgresBlockRepository) Create(ctx context.Context, block *models.Block) error {
 	// Define SQL INSERT statement for block creation
 	query := `
-		INSERT INTO blocks (id, document_id, version, content, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO blocks (id, document_id,type, version, content, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 	// Execute SQL INSERT passing model struct values
 	_, err := r.pool.Exec(ctx, query,
 		block.ID,
 		block.DocumentID,
+		block.Type,
 		block.Version,
 		block.Content,
 		block.CreatedAt,
@@ -74,34 +73,34 @@ func (r *PostgresBlockRepository) Create(ctx context.Context, block *models.Bloc
 	return nil
 }
 
-
 // BatchCreate inserts multiple blocks into the blocks table
 func (r *PostgresBlockRepository) BatchCreate(ctx context.Context, blocks []*models.Block) error {
-    query := `
-        INSERT INTO blocks (id, document_id, version, content, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6)
+	query := `
+        INSERT INTO blocks (id,document_id, type, version, content, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
     `
-    batch := &pgx.Batch{}
-    for _, block := range blocks {
-        batch.Queue(query, block.ID, block.DocumentID, block.Version, block.Content, block.CreatedAt, block.UpdatedAt)
-    }
+	batch := &pgx.Batch{}
 
-    br := r.pool.SendBatch(ctx, batch)
-    defer br.Close()
+	for _, block := range blocks {
+		batch.Queue(query, block.ID, block.DocumentID, block.Type, block.Version, block.Content, block.CreatedAt, block.UpdatedAt)
+	}
 
-    for range blocks {
-        if _, err := br.Exec(); err != nil {
-            return fmt.Errorf("failed to batch insert blocks: %w", err)
-        }
-    }
-    return nil
+	br := r.pool.SendBatch(ctx, batch)
+	defer br.Close()
+
+	for range blocks {
+		if _, err := br.Exec(); err != nil {
+			return fmt.Errorf("failed to batch insert blocks: %w", err)
+		}
+	}
+	return nil
 }
 
 // GetByID fetches a single block record by ID
 func (r *PostgresBlockRepository) GetByID(ctx context.Context, id string) (*models.Block, error) {
 	// Define SQL SELECT statement targeting single block by ID
 	query := `
-		SELECT id, document_id, version, content, created_at, updated_at
+		SELECT id, document_id, type, version, content, created_at, updated_at
 		FROM blocks
 		WHERE id = $1
 	`
@@ -112,6 +111,7 @@ func (r *PostgresBlockRepository) GetByID(ctx context.Context, id string) (*mode
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&block.ID,
 		&block.DocumentID,
+		&block.Type,
 		&block.Version,
 		&block.Content,
 		&block.CreatedAt,
@@ -132,13 +132,11 @@ func (r *PostgresBlockRepository) GetByID(ctx context.Context, id string) (*mode
 	return &block, nil
 }
 
-
-
 // GetByDocumentID fetches all blocks associated with a document
 func (r *PostgresBlockRepository) GetByDocumentID(ctx context.Context, documentID string) ([]*models.Block, error) {
 	// Query to select all blocks matching document_id
 	query := `
-		SELECT id, document_id, version, content, created_at, updated_at
+		SELECT id, document_id,type, version, content, created_at, updated_at
 		FROM blocks
 		WHERE document_id = $1
 	`
@@ -163,6 +161,7 @@ func (r *PostgresBlockRepository) GetByDocumentID(ctx context.Context, documentI
 		if err := rows.Scan(
 			&block.ID,
 			&block.DocumentID,
+			&block.Type,
 			&block.Version,
 			&block.Content,
 			&block.CreatedAt,

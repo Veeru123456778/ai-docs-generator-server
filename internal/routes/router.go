@@ -73,6 +73,7 @@ func RegisterRoutes(
 		blocks := v1.Group("/blocks")
 		{
 			blocks.POST("", blockCtrl.Create)
+			blocks.POST("/batch",blockCtrl.BatchCreate)
 			blocks.GET("/:id", blockCtrl.GetByID)
 			blocks.PUT("/:id", blockCtrl.Update)
 			blocks.DELETE("/:id", blockCtrl.Delete)

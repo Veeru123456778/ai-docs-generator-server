@@ -16,7 +16,7 @@ import (
 // BlockService defines operations for managing blocks and sequence order
 type BlockService interface {
 	CreateBlock(ctx context.Context, req *dtos.CreateBlockRequest) (*dtos.BlockResponse, error)
-	BatchCreateBlocks(ctx context.Context, req *dtos.BatchCreateBlocksRequest) (*dtos.BatchCreateBlocksResponse,error)
+	BatchCreateBlocks(ctx context.Context, req *dtos.BatchCreateBlocksRequest) (*dtos.BatchCreateBlocksResponse, error)
 	GetBlockByID(ctx context.Context, id string) (*dtos.BlockResponse, error)
 	UpdateBlock(ctx context.Context, id string, req *dtos.UpdateBlockRequest) (*dtos.BlockResponse, error)
 	DeleteBlock(ctx context.Context, id string) error
@@ -25,14 +25,14 @@ type BlockService interface {
 // blockService implements BlockService interface
 type blockService struct {
 	blockRepo repository.BlockRepository
-	docRepo repository.DocumentRepository
+	docRepo   repository.DocumentRepository
 }
 
 // NewBlockService initializes and returns a new blockService instance
 func NewBlockService(blockRepo repository.BlockRepository, docRepo repository.DocumentRepository) BlockService {
 	return &blockService{
 		blockRepo: blockRepo,
-		docRepo:  docRepo,
+		docRepo:   docRepo,
 	}
 }
 
@@ -53,6 +53,7 @@ func (s *blockService) CreateBlock(ctx context.Context, req *dtos.CreateBlockReq
 	block := &models.Block{
 		ID:         blockID,
 		DocumentID: req.DocumentID,
+		Type:       req.Type,
 		Version:    1, // Initial block version starts at 1
 		Content:    req.Content,
 		CreatedAt:  now,
@@ -83,45 +84,55 @@ func (s *blockService) CreateBlock(ctx context.Context, req *dtos.CreateBlockReq
 	}, nil
 }
 
-
 // BatchCreateBlocks handles batch creation of blocks
 func (s *blockService) BatchCreateBlocks(ctx context.Context, req *dtos.BatchCreateBlocksRequest) (*dtos.BatchCreateBlocksResponse, error) {
-    now := time.Now().UTC()
-    var blocks []*models.Block
-    for _, blockReq := range req.Blocks {
-        blockID := blockReq.ID
-        if blockID == "" {
-            blockID = uuid.New().String()
-        }
-        blocks = append(blocks, &models.Block{
-            ID:         blockID,
-            DocumentID: blockReq.DocumentID,
-            Version:    1,
-            Content:    blockReq.Content,
-            CreatedAt:  now,
-            UpdatedAt:  now,
-        })
-    }
+	if len(req.Blocks) == 0 {
+		return nil, ErrEmptyBlocksBatch
+	}
 
-    if err := s.blockRepo.BatchCreate(ctx, blocks); err != nil {
-        return nil, fmt.Errorf("service failed to batch create blocks: %w", err)
-    }
+	// Verify parent document exists using the DocumentID from the first block
+	documentID := req.DocumentID
 
-    var blockResponses []dtos.BlockResponse
-    for _, block := range blocks {
-        blockResponses = append(blockResponses, dtos.BlockResponse{
-            ID:         block.ID,
-            DocumentID: block.DocumentID,
-            Version:    block.Version,
-            Content:    block.Content,
-            CreatedAt:  block.CreatedAt,
-            UpdatedAt:  block.UpdatedAt,
-        })
-    }
+	_, err := s.docRepo.GetByID(ctx, documentID)
 
-    return &dtos.BatchCreateBlocksResponse{Blocks: blockResponses}, nil
+	if err != nil {
+		return nil, fmt.Errorf("cannot create block, parent document missing: %w", err)
+	}
+
+	// Prepare blocks for insertion
+	blocks := make([]*models.Block, len(req.Blocks))
+
+	for i, blockReq := range req.Blocks {
+		blocks[i] = &models.Block{
+			ID:         uuid.New().String(),
+			DocumentID: documentID,
+			Content:    blockReq.Content,
+			Type:       blockReq.Type,
+			CreatedAt:  time.Now(),
+			UpdatedAt:  time.Now(),
+		}
+	}
+
+	// Insert blocks in a batch
+	if err := s.blockRepo.BatchCreate(ctx, blocks); err != nil {
+		return nil, fmt.Errorf("failed to batch insert blocks: %w", err)
+	}
+
+	// Prepare response
+	responseBlocks := make([]dtos.BlockResponse, len(blocks))
+	for i, block := range blocks {
+		responseBlocks[i] = dtos.BlockResponse{
+			ID:         block.ID,
+			DocumentID: block.DocumentID,
+			Content:    block.Content,
+			Type:       block.Type,
+			CreatedAt:  block.CreatedAt,
+			UpdatedAt:  block.UpdatedAt,
+		}
+	}
+
+	return &dtos.BatchCreateBlocksResponse{Blocks: responseBlocks}, nil
 }
-
 
 // GetBlockByID fetches a single block DTO by ID
 func (s *blockService) GetBlockByID(ctx context.Context, id string) (*dtos.BlockResponse, error) {
@@ -133,6 +144,7 @@ func (s *blockService) GetBlockByID(ctx context.Context, id string) (*dtos.Block
 	return &dtos.BlockResponse{
 		ID:         block.ID,
 		DocumentID: block.DocumentID,
+		Type:       block.Type,
 		Version:    block.Version,
 		Content:    block.Content,
 		CreatedAt:  block.CreatedAt,
@@ -164,6 +176,7 @@ func (s *blockService) UpdateBlock(ctx context.Context, id string, req *dtos.Upd
 	return &dtos.BlockResponse{
 		ID:         updatedBlock.ID,
 		DocumentID: updatedBlock.DocumentID,
+		Type:       updatedBlock.Type,
 		Version:    updatedBlock.Version,
 		Content:    updatedBlock.Content,
 		CreatedAt:  updatedBlock.CreatedAt,

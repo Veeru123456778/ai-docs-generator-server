@@ -26,6 +26,8 @@ type CreateBlockRequest struct {
 
 
 type BatchCreateBlocksRequest struct {
+	DocumentID string `json:"document_id" binding:"required"`
+
     Blocks []CreateBlockRequest `json:"blocks" binding:"required"`
 }
 
@@ -65,3 +67,4 @@ type BlockResponse struct {
 	// Timestamp when block was last modified
 	UpdatedAt time.Time `json:"updated_at"`
 }
+

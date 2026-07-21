@@ -21,46 +21,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": { 
-                      "type": "string", 
-                      "description": "Optional client-side UUID. Server autogenerates one if omitted." 
-                    },
-                    "title": { 
-                      "type": "string", 
-                      "example": "Go & Next.js Architecture" 
-                    },
-                    "user_id": { 
-                      "type": "string", 
-                      "example": "usr_123" 
-                    }
-                  },
-                  "required": ["title"]
+                  "$ref": "#/components/schemas/CreateDocumentRequest"
                 }
               }
             }
           },
           "responses": {
-            "200": {
+            "201": {
               "description": "Document created successfully.",
               "content": {
                 "application/json": {
                   "schema": {
-                    "type": "object",
-                    "properties": {
-                      "id": { "type": "string", "example": "bd65536a-b925-4bf0-a6fe-0cf1cb585567" },
-                      "user_id": { "type": "string", "example": "usr_123" },
-                      "title": { "type": "string", "example": "Go & Next.js Architecture" },
-                      "url": { "type": "string", "example": "http://localhost:3000/documents/bd65536a-b925-4bf0-a6fe-0cf1cb585567" },
-                      "block_order": { 
-                        "type": "array", 
-                        "items": { "type": "string" } 
-                      },
-                      "created_at": { "type": "string", "format": "date-time" },
-                      "updated_at": { "type": "string", "format": "date-time" }
-                    },
-                    "required": ["id", "title", "url"]
+                    "$ref": "#/components/schemas/DocumentResponse"
                   }
                 }
               }
@@ -77,103 +49,264 @@
               "name": "id",
               "in": "path",
               "required": true,
-              "schema": { "type": "string" }
+              "schema": {
+                "type": "string"
+              }
             }
           ],
           "responses": {
             "200": {
-              "description": "Hydrated document response for Next.js frontend."
+              "description": "Hydrated document response for Next.js frontend.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HydratedDocumentResponse"
+                  }
+                }
+              }
             }
           }
         }
       },
       "/blocks": {
         "post": {
-          "summary": "Add a content block to an existing document",
+          "summary": "Add a single content block to an existing document",
           "operationId": "createBlock",
           "requestBody": {
             "required": true,
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "document_id": { 
-                      "type": "string", 
-                      "description": "UUID of target document" 
-                    },
-                    "type": { 
-                      "type": "string", 
-                      "enum": ["heading", "paragraph", "code", "list"],
-                      "description": "The visual block type to render in Next.js"
-                    },
-                    "content": {
-                      "type": "object",
-                      "description": "Full JSON payload required by Next.js components to render this block.",
-                      "properties": {
-                        "text": { 
-                          "type": "string", 
-                          "description": "Text content for heading, paragraph, or code." 
-                        },
-                        "level": { 
-                          "type": "integer", 
-                          "description": "Heading level (1, 2, or 3) if type is heading", 
-                          "example": 2 
-                        },
-                        "language": { 
-                          "type": "string", 
-                          "description": "Programming language (e.g., 'go', 'typescript') if type is code", 
-                          "example": "go" 
-                        },
-                        "items": { 
-                          "type": "array", 
-                          "items": { "type": "string" }, 
-                          "description": "Array of list string items if type is list", 
-                          "example": ["Item 1", "Item 2"] 
-                        }
-                      },
-                      "required": ["text"]
-                    }
-                  },
-                  "required": ["document_id", "type", "content"]
+                  "$ref": "#/components/schemas/CreateSingleBlockRequest"
                 }
               }
             }
           },
           "responses": {
-            "200": {
-              "description": "Block appended successfully."
+            "201": {
+              "description": "Block appended successfully.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/BlockResponse"
+                  }
+                }
+              }
             }
           }
         }
       },
       "/blocks/batch": {
         "post": {
-            "summary": "Batch create blocks",
-            "operationId": "batchCreateBlocks",
-            "requestBody": {
+          "summary": "Batch create and append multiple blocks",
+          "operationId": "batchCreateBlocks",
+          "requestBody": {
             "required": true,
             "content": {
-                "application/json": {
+              "application/json": {
                 "schema": {
-                    "$ref": "#/components/schemas/BatchCreateBlocksRequest"
+                  "$ref": "#/components/schemas/BatchCreateBlocksRequest"
                 }
-                }
+              }
             }
-            },
-            "responses": {
+          },
+          "responses": {
             "201": {
-                "description": "Blocks created successfully.",
-                "content": {
+              "description": "Blocks created successfully.",
+              "content": {
                 "application/json": {
-                    "schema": {
+                  "schema": {
                     "$ref": "#/components/schemas/BatchCreateBlocksResponse"
-                    }
+                  }
                 }
-                }
-            }
+              }
             }
           }
         }
+      },
+      "/blocks/{id}": {
+        "delete": {
+            "summary": "Delete a block by ID",
+            "operationId": "deleteBlock",
+            "parameters": [
+            {
+                "name": "id",
+                "in": "path",
+                "required": true,
+                "schema": {
+                "type": "string"
+                },
+                "description": "The unique identifier of the block to delete"
+            }
+            ],
+            "responses": {
+            "204": {
+                "description": "Block deleted successfully"
+            },
+            "404": {
+                "description": "Block not found"
+            },
+            "500": {
+                "description": "Internal server error"
+            }
+            }
+        }
+        }
+    },
+    "components": {
+      "schemas": {
+        "CreateDocumentRequest": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Optional client-side UUID. Server autogenerates one if omitted."
+            },
+            "title": {
+              "type": "string",
+              "example": "Go & Next.js Architecture"
+            },
+            "user_id": {
+              "type": "string",
+              "example": "usr_123"
+            }
+          },
+          "required": ["title"]
+        },
+        "DocumentResponse": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string", "example": "bd65536a-b925-4bf0-a6fe-0cf1cb585567" },
+            "user_id": { "type": "string", "example": "usr_123" },
+            "title": { "type": "string", "example": "Go & Next.js Architecture" },
+            "url": { "type": "string", "example": "http://localhost:3000/documents/bd65536a-b925-4bf0-a6fe-0cf1cb585567" },
+            "block_order": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "created_at": { "type": "string", "format": "date-time" },
+            "updated_at": { "type": "string", "format": "date-time" }
+          },
+          "required": ["id", "title", "url"]
+        },
+        "BlockContent": {
+          "type": "object",
+          "description": "Full JSON payload required by Next.js components to render this block.",
+          "properties": {
+            "text": {
+              "type": "string",
+              "description": "Text content for heading, paragraph, or code."
+            },
+            "level": {
+              "type": "integer",
+              "description": "Heading level (1, 2, or 3) if type is heading",
+              "example": 2
+            },
+            "language": {
+              "type": "string",
+              "description": "Programming language (e.g., 'go', 'typescript') if type is code",
+              "example": "go"
+            },
+            "items": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Array of list string items if type is list",
+              "example": ["Item 1", "Item 2"]
+            }
+          }
+        },
+        "CreateBlockItem": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["heading", "paragraph", "code", "list"],
+              "description": "The visual block type to render in Next.js"
+            },
+            "content": {
+              "$ref": "#/components/schemas/BlockContent"
+            }
+          },
+          "required": ["type", "content"]
+        },
+        "CreateSingleBlockRequest": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "description": "UUID of target document"
+            },
+            "type": {
+              "type": "string",
+              "enum": ["heading", "paragraph", "code", "list"]
+            },
+            "content": {
+              "$ref": "#/components/schemas/BlockContent"
+            }
+          },
+          "required": ["document_id", "type", "content"]
+        },
+        "BatchCreateBlocksRequest": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "description": "UUID of target document"
+            },
+            "blocks": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/CreateBlockItem"
+              },
+              "description": "List of blocks to append in a single request"
+            }
+          },
+          "required": ["document_id", "blocks"]
+        },
+        "BlockResponse": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "document_id": { "type": "string" },
+            "type": { "type": "string" },
+            "version": { "type": "integer" },
+            "content": { "type": "object" },
+            "created_at": { "type": "string", "format": "date-time" },
+            "updated_at": { "type": "string", "format": "date-time" }
+          },
+          "required": ["id", "document_id", "type", "content"]
+        },
+        "BatchCreateBlocksResponse": {
+          "type": "object",
+          "properties": {
+            "status": { "type": "string", "example": "success" },
+            "count": { "type": "integer", "example": 3 },
+            "blocks": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/BlockResponse"
+              }
+            }
+          },
+          "required": ["status", "count", "blocks"]
+        },
+        "HydratedDocumentResponse": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "title": { "type": "string" },
+            "user_id": { "type": "string" },
+            "blocks": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/BlockResponse"
+              }
+            },
+            "created_at": { "type": "string", "format": "date-time" },
+            "updated_at": { "type": "string", "format": "date-time" }
+          },
+          "required": ["id", "title", "blocks"]
+        }
+      }
     }
   }

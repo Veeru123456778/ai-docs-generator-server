@@ -178,6 +178,7 @@ func resolveBlockType(b *models.Block) string {
 
 	// 2. Unmarshal the raw []byte JSON into a generic map
 	var contentMap map[string]interface{}
+
 	if err := json.Unmarshal(b.Content, &contentMap); err != nil {
 		return "paragraph" // Default fallback if JSON unmarshaling fails
 	}
@@ -219,18 +220,22 @@ func (s *documentService) GetDocumentWithBlocks(ctx context.Context, id string) 
 	
 
 	orderedBlocks := make([]dtos.BlockResponse, 0, len(blocks))
-	for _, blockID := range doc.BlockOrder {
+
+	for idx, blockID := range doc.BlockOrder {
 		if b, exists := blockMap[blockID]; exists {
 
 			orderedBlocks = append(orderedBlocks, dtos.BlockResponse{
 				ID:         b.ID,
 				DocumentID: b.DocumentID,
-				Type:       resolveBlockType(b), // 👈 FIX: Added missing Type field!
+				Type:       b.Type,
 				Version:    b.Version,
 				Content:    b.Content,
 				CreatedAt:  b.CreatedAt,
 				UpdatedAt:  b.UpdatedAt,
 			})
+			if orderedBlocks[idx].Type==""{
+                orderedBlocks[idx].Type = resolveBlockType(b)
+			}
 			// Delete processed block from map to track orphan blocks
 			delete(blockMap, blockID)
 		}
@@ -241,7 +246,7 @@ func (s *documentService) GetDocumentWithBlocks(ctx context.Context, id string) 
 		orderedBlocks = append(orderedBlocks, dtos.BlockResponse{
 			ID:         b.ID,
 			DocumentID: b.DocumentID,
-			Type:       b.Type, // 👈 FIX: Added missing Type field!
+			Type:       b.Type,
 			Version:    b.Version,
 			Content:    b.Content,
 			CreatedAt:  b.CreatedAt,
