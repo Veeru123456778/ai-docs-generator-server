@@ -25,10 +25,14 @@ type CreateBlockRequest struct {
 }
 
 
-type BatchAppendBlocksRequest struct {
+type BatchCreateBlocksRequest struct {
     Blocks []CreateBlockRequest `json:"blocks" binding:"required"`
 }
 
+// BatchCreateBlocksResponse defines outgoing JSON payload for batch block creation
+type BatchCreateBlocksResponse struct {
+    Blocks []BlockResponse `json:"blocks"`
+}
 
 // UpdateBlockRequest defines incoming JSON payload when modifying block content
 type UpdateBlockRequest struct {

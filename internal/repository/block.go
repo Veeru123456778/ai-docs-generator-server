@@ -23,6 +23,8 @@ type BlockRepository interface {
 	// Inserts a new block record into database
 	Create(ctx context.Context, block *models.Block) error
 
+	BatchCreate(ctx context.Context,blocks []*models.Block) error
+
 	// BatchCreate(ctx context.Context, docID string, blocks []*models.Block) ([]*models.Block, error)
 
 	// Retrieves a single block by block ID
@@ -70,6 +72,29 @@ func (r *PostgresBlockRepository) Create(ctx context.Context, block *models.Bloc
 	}
 	// Return nil indicating successful block insertion
 	return nil
+}
+
+
+// BatchCreate inserts multiple blocks into the blocks table
+func (r *PostgresBlockRepository) BatchCreate(ctx context.Context, blocks []*models.Block) error {
+    query := `
+        INSERT INTO blocks (id, document_id, version, content, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6)
+    `
+    batch := &pgx.Batch{}
+    for _, block := range blocks {
+        batch.Queue(query, block.ID, block.DocumentID, block.Version, block.Content, block.CreatedAt, block.UpdatedAt)
+    }
+
+    br := r.pool.SendBatch(ctx, batch)
+    defer br.Close()
+
+    for range blocks {
+        if _, err := br.Exec(); err != nil {
+            return fmt.Errorf("failed to batch insert blocks: %w", err)
+        }
+    }
+    return nil
 }
 
 // GetByID fetches a single block record by ID

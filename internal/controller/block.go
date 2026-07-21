@@ -35,6 +35,25 @@ func (ctrl *BlockController) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, res)
 }
 
+
+// BatchCreate handles batch creation of blocks
+func (ctrl *BlockController) BatchCreate(c *gin.Context) {
+    var req dtos.BatchCreateBlocksRequest
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+    res, err := ctrl.blockService.BatchCreateBlocks(c.Request.Context(), &req)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusCreated, res)
+}
+
+
 func (ctrl *BlockController) GetByID(c *gin.Context) {
 	id := c.Param("id")
 

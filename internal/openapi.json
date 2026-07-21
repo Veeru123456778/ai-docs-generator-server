@@ -146,6 +146,34 @@
             }
           }
         }
-      }
+      },
+      "/blocks/batch": {
+        "post": {
+            "summary": "Batch create blocks",
+            "operationId": "batchCreateBlocks",
+            "requestBody": {
+            "required": true,
+            "content": {
+                "application/json": {
+                "schema": {
+                    "$ref": "#/components/schemas/BatchCreateBlocksRequest"
+                }
+                }
+            }
+            },
+            "responses": {
+            "201": {
+                "description": "Blocks created successfully.",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "$ref": "#/components/schemas/BatchCreateBlocksResponse"
+                    }
+                }
+                }
+            }
+            }
+          }
+        }
     }
   }

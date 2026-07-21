@@ -16,6 +16,7 @@ import (
 // BlockService defines operations for managing blocks and sequence order
 type BlockService interface {
 	CreateBlock(ctx context.Context, req *dtos.CreateBlockRequest) (*dtos.BlockResponse, error)
+	BatchCreateBlocks(ctx context.Context, req *dtos.BatchCreateBlocksRequest) (*dtos.BatchCreateBlocksResponse,error)
 	GetBlockByID(ctx context.Context, id string) (*dtos.BlockResponse, error)
 	UpdateBlock(ctx context.Context, id string, req *dtos.UpdateBlockRequest) (*dtos.BlockResponse, error)
 	DeleteBlock(ctx context.Context, id string) error
@@ -81,6 +82,46 @@ func (s *blockService) CreateBlock(ctx context.Context, req *dtos.CreateBlockReq
 		UpdatedAt:  block.UpdatedAt,
 	}, nil
 }
+
+
+// BatchCreateBlocks handles batch creation of blocks
+func (s *blockService) BatchCreateBlocks(ctx context.Context, req *dtos.BatchCreateBlocksRequest) (*dtos.BatchCreateBlocksResponse, error) {
+    now := time.Now().UTC()
+    var blocks []*models.Block
+    for _, blockReq := range req.Blocks {
+        blockID := blockReq.ID
+        if blockID == "" {
+            blockID = uuid.New().String()
+        }
+        blocks = append(blocks, &models.Block{
+            ID:         blockID,
+            DocumentID: blockReq.DocumentID,
+            Version:    1,
+            Content:    blockReq.Content,
+            CreatedAt:  now,
+            UpdatedAt:  now,
+        })
+    }
+
+    if err := s.blockRepo.BatchCreate(ctx, blocks); err != nil {
+        return nil, fmt.Errorf("service failed to batch create blocks: %w", err)
+    }
+
+    var blockResponses []dtos.BlockResponse
+    for _, block := range blocks {
+        blockResponses = append(blockResponses, dtos.BlockResponse{
+            ID:         block.ID,
+            DocumentID: block.DocumentID,
+            Version:    block.Version,
+            Content:    block.Content,
+            CreatedAt:  block.CreatedAt,
+            UpdatedAt:  block.UpdatedAt,
+        })
+    }
+
+    return &dtos.BatchCreateBlocksResponse{Blocks: blockResponses}, nil
+}
+
 
 // GetBlockByID fetches a single block DTO by ID
 func (s *blockService) GetBlockByID(ctx context.Context, id string) (*dtos.BlockResponse, error) {
