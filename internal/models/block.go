@@ -12,6 +12,8 @@ type Block struct {
 	// Foreign key referencing the parent document ID
 	DocumentID string `json:"document_id" db:"document_id"`
 
+	Type string `json:"type" db:"type"`
+
 	// Version number used for optimistic concurrency control during updates
 	Version int `json:"version" db:"version"`
 

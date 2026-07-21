@@ -29,6 +29,9 @@ type DocumentResponse struct {
 
 	// Owner user ID
 	UserID string `json:"user_id"`
+    
+	// Direct URL to view/edit the document in the Next.js frontend
+	URL string `json:"url"`
 
 	// Document title
 	Title string `json:"title"`

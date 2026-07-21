@@ -4,6 +4,8 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
+	"encoding/json"
 	"time"
 
 	"ai-docs-generator/internal/dtos"
@@ -72,6 +74,7 @@ func (s *documentService) CreateDocument(ctx context.Context, req *dtos.CreateDo
 	return &dtos.DocumentResponse{
 		ID:         doc.ID,
 		UserID:     doc.UserID,
+		URL:        fmt.Sprintf("http://localhost:3000/documents/%s", doc.ID),
 		Title:      doc.Title,
 		BlockOrder: doc.BlockOrder,
 		CreatedAt:  doc.CreatedAt,
@@ -96,11 +99,101 @@ func (s *documentService) GetDocumentByID(ctx context.Context, id string) (*dtos
 	return &dtos.DocumentResponse{
 		ID:         doc.ID,
 		UserID:     doc.UserID,
+		URL:        fmt.Sprintf("http://localhost:3000/documents/%s", doc.ID),
 		Title:      doc.Title,
 		BlockOrder: doc.BlockOrder,
 		CreatedAt:  doc.CreatedAt,
 		UpdatedAt:  doc.UpdatedAt,
 	}, nil
+}
+
+// // GetDocumentWithBlocks fetches complete document metadata along with all child blocks
+// func (s *documentService) GetDocumentWithBlocks(ctx context.Context, id string) (*dtos.DocumentWithBlocksResponse, error) {
+// 	doc, err := s.docRepo.GetByID(ctx, id)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	// Fetch all blocks associated with this document ID
+// 	blocks, err := s.blockRepo.GetByDocumentID(ctx, id)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("service failed to fetch document blocks: %w", err)
+// 	}
+
+// 	// Index blocks by their unique block ID in a temporary lookup map
+// 	blockMap := make(map[string]*models.Block)
+// 	for _, b := range blocks {
+// 		blockMap[b.ID] = b
+// 	}
+
+// 	// Order blocks strictly according to document's BlockOrder sequence array
+// 	orderedBlocks := make([]dtos.BlockResponse, 0, len(blocks))
+// 	for _, blockID := range doc.BlockOrder {
+// 		if b, exists := blockMap[blockID]; exists {
+// 			orderedBlocks = append(orderedBlocks, dtos.BlockResponse{
+// 				ID:         b.ID,
+// 				DocumentID: b.DocumentID,
+// 				Version:    b.Version,
+// 				Content:    b.Content,
+// 				CreatedAt:  b.CreatedAt,
+// 				UpdatedAt:  b.UpdatedAt,
+// 			})
+// 			// Delete processed block from map to track orphan blocks
+// 			delete(blockMap, blockID)
+// 		}
+// 	}
+
+// 	// Append any leftover blocks missing from block_order array to prevent data loss
+// 	for _, b := range blockMap {
+// 		orderedBlocks = append(orderedBlocks, dtos.BlockResponse{
+// 			ID:         b.ID,
+// 			DocumentID: b.DocumentID,
+// 			Version:    b.Version,
+// 			Content:    b.Content,
+// 			CreatedAt:  b.CreatedAt,
+// 			UpdatedAt:  b.UpdatedAt,
+// 		})
+// 	}
+
+// 	// Assemble and return composite DocumentWithBlocks DTO payload
+// 	return &dtos.DocumentWithBlocksResponse{
+// 		Document: dtos.DocumentResponse{
+// 			ID:         doc.ID,
+// 			UserID:     doc.UserID,
+// 			URL:        fmt.Sprintf("http://localhost:3000/documents/%s", doc.ID),
+// 			Title:      doc.Title,
+// 			BlockOrder: doc.BlockOrder,
+// 			CreatedAt:  doc.CreatedAt,
+// 			UpdatedAt:  doc.UpdatedAt,
+// 		},
+// 		Blocks: orderedBlocks,
+// 	}, nil
+// }
+
+func resolveBlockType(b *models.Block) string {
+	// 1. If Type is already populated in DB/struct, return it
+	if strings.TrimSpace(b.Type) != "" {
+		return b.Type
+	}
+
+	// 2. Unmarshal the raw []byte JSON into a generic map
+	var contentMap map[string]interface{}
+	if err := json.Unmarshal(b.Content, &contentMap); err != nil {
+		return "paragraph" // Default fallback if JSON unmarshaling fails
+	}
+
+	// 3. Check map keys for structure hints
+	if _, hasLevel := contentMap["level"]; hasLevel {
+		return "heading"
+	}
+	if _, hasItems := contentMap["items"]; hasItems {
+		return "list"
+	}
+	if _, hasLang := contentMap["language"]; hasLang {
+		return "code"
+	}
+
+	return "paragraph"
 }
 
 // GetDocumentWithBlocks fetches complete document metadata along with all child blocks
@@ -123,12 +216,16 @@ func (s *documentService) GetDocumentWithBlocks(ctx context.Context, id string) 
 	}
 
 	// Order blocks strictly according to document's BlockOrder sequence array
+	
+
 	orderedBlocks := make([]dtos.BlockResponse, 0, len(blocks))
 	for _, blockID := range doc.BlockOrder {
 		if b, exists := blockMap[blockID]; exists {
+
 			orderedBlocks = append(orderedBlocks, dtos.BlockResponse{
 				ID:         b.ID,
 				DocumentID: b.DocumentID,
+				Type:       resolveBlockType(b), // 👈 FIX: Added missing Type field!
 				Version:    b.Version,
 				Content:    b.Content,
 				CreatedAt:  b.CreatedAt,
@@ -144,6 +241,7 @@ func (s *documentService) GetDocumentWithBlocks(ctx context.Context, id string) 
 		orderedBlocks = append(orderedBlocks, dtos.BlockResponse{
 			ID:         b.ID,
 			DocumentID: b.DocumentID,
+			Type:       b.Type, // 👈 FIX: Added missing Type field!
 			Version:    b.Version,
 			Content:    b.Content,
 			CreatedAt:  b.CreatedAt,
@@ -156,6 +254,7 @@ func (s *documentService) GetDocumentWithBlocks(ctx context.Context, id string) 
 		Document: dtos.DocumentResponse{
 			ID:         doc.ID,
 			UserID:     doc.UserID,
+			URL:        fmt.Sprintf("http://localhost:3000/documents/%s", doc.ID),
 			Title:      doc.Title,
 			BlockOrder: doc.BlockOrder,
 			CreatedAt:  doc.CreatedAt,
@@ -182,6 +281,7 @@ func (s *documentService) UpdateDocument(ctx context.Context, id string, req *dt
 	return &dtos.DocumentResponse{
 		ID:         doc.ID,
 		UserID:     doc.UserID,
+		URL:        fmt.Sprintf("http://localhost:3000/documents/%s", doc.ID),
 		Title:      doc.Title,
 		BlockOrder: doc.BlockOrder,
 		CreatedAt:  doc.CreatedAt,

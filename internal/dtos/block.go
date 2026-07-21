@@ -12,6 +12,8 @@ type CreateBlockRequest struct {
 	// Optional block ID (server generates UUID if omitted)
 	ID string `json:"id"`
 
+	Type       string          `json:"type" binding:"required"` 
+
 	// Parent document ID to attach block to (required field)
 	DocumentID string `json:"document_id" binding:"required"`
 
@@ -21,6 +23,12 @@ type CreateBlockRequest struct {
 	// Arbitrary JSON payload representing rich block content (required field)
 	Content json.RawMessage `json:"content" binding:"required"`
 }
+
+
+type BatchAppendBlocksRequest struct {
+    Blocks []CreateBlockRequest `json:"blocks" binding:"required"`
+}
+
 
 // UpdateBlockRequest defines incoming JSON payload when modifying block content
 type UpdateBlockRequest struct {
@@ -38,6 +46,8 @@ type BlockResponse struct {
 
 	// Parent document ID
 	DocumentID string `json:"document_id"`
+
+	Type string `json:"type"`
 
 	// Current block version number
 	Version int `json:"version"`

@@ -22,6 +22,9 @@ var ErrVersionConflict = errors.New("optimistic concurrency conflict: block vers
 type BlockRepository interface {
 	// Inserts a new block record into database
 	Create(ctx context.Context, block *models.Block) error
+
+	// BatchCreate(ctx context.Context, docID string, blocks []*models.Block) ([]*models.Block, error)
+
 	// Retrieves a single block by block ID
 	GetByID(ctx context.Context, id string) (*models.Block, error)
 	// Retrieves all blocks matching a parent document ID
@@ -103,6 +106,8 @@ func (r *PostgresBlockRepository) GetByID(ctx context.Context, id string) (*mode
 	// Return pointer to populated Block model
 	return &block, nil
 }
+
+
 
 // GetByDocumentID fetches all blocks associated with a document
 func (r *PostgresBlockRepository) GetByDocumentID(ctx context.Context, documentID string) ([]*models.Block, error) {

@@ -8,6 +8,7 @@ import (
 	"ai-docs-generator/internal/config"
 	"ai-docs-generator/internal/controller"
 	"ai-docs-generator/internal/database"
+	"github.com/gin-contrib/cors"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,7 +21,21 @@ func RegisterRoutes(
 	blockCtrl *controller.BlockController,
 ) {
 	// Middleware
+
+	// In your routes.go or main.go
+    r.StaticFile("/openapi.json", "./internal/openapi.json") 
+
 	r.Use(gin.Recovery())
+
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
 
 	// Health Check Endpoint
 	r.GET("/health", func(c *gin.Context) {
